@@ -24,7 +24,7 @@ class YouTubeDownloaderApp(App):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
 
         # Add a logo or banner image
-        self.banner = Image(source='D:\working\python\Android project\logo.jpg', size_hint=(1, 0.3))
+        self.banner = Image(source='logo.jpg', size_hint=(1, 0.3))
         self.layout.add_widget(self.banner)
 
         # Animated text label
