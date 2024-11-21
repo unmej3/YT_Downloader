@@ -5,8 +5,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.filechooser import FileChooserListView
-from kivy.uix.popup import Popup
 from kivy.uix.progressbar import ProgressBar
 from kivy.animation import Animation
 from kivy.core.window import Window
@@ -14,6 +12,7 @@ from kivy.uix.image import Image
 from kivy.utils import get_color_from_hex
 from kivy.graphics import Color, Rectangle
 import yt_dlp
+from plyer import storagepath  # Use plyer to get storage paths
 
 # Set a custom background color
 Window.clearcolor = get_color_from_hex("#2E3440")  # Dark gray-blue background
@@ -24,7 +23,7 @@ class YouTubeDownloaderApp(App):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
 
         # Add a logo or banner image
-        self.banner = Image(source='logo.jpg', size_hint=(1, 0.3))
+        self.banner = Image(source='YT_Downloader\icon.jpg', size_hint=(1, 0.3))
         self.layout.add_widget(self.banner)
 
         # Animated text label
@@ -48,25 +47,6 @@ class YouTubeDownloaderApp(App):
             cursor_color=get_color_from_hex("#88C0D0"),
         )
         self.layout.add_widget(self.url_input)
-
-        # Button to select output directory
-        self.output_button = Button(
-            text="Select Output Directory",
-            size_hint=(1, 0.1),
-            background_color=get_color_from_hex("#4C566A"),
-            color=get_color_from_hex("#ECEFF4"),
-        )
-        self.output_button.bind(on_press=self.open_file_chooser)
-        self.layout.add_widget(self.output_button)
-
-        # Label to display selected output directory
-        self.output_label = Label(
-            text="Output Directory: Not Selected",
-            font_size='14sp',
-            color=get_color_from_hex("#D8DEE9"),  # Light gray
-            size_hint=(1, 0.1),
-        )
-        self.layout.add_widget(self.output_label)
 
         # Progress Bar for downloading
         self.progress_bar = ProgressBar(
@@ -110,39 +90,18 @@ class YouTubeDownloaderApp(App):
         anim.repeat = True
         anim.start(self.title_label)
 
-    def open_file_chooser(self, instance):
-        # Popup for file chooser
-        self.file_chooser = FileChooserListView(path=os.path.expanduser("~"))
-        popup_layout = BoxLayout(orientation='vertical')
-        popup_layout.add_widget(self.file_chooser)
-
-        # Select and cancel buttons
-        select_button = Button(text="Select", size_hint=(1, 0.1))
-        select_button.bind(on_press=self.select_directory)
-        popup_layout.add_widget(select_button)
-
-        self.popup = Popup(title="Select Output Directory", content=popup_layout, size_hint=(0.9, 0.9))
-        self.popup.open()
-
-    def select_directory(self, instance):
-        # Get selected directory
-        selected_dir = self.file_chooser.path
-        if selected_dir:
-            self.output_label.text = f"Output Directory: {selected_dir}"
-            self.output_directory = selected_dir
-        self.popup.dismiss()
-
     def start_download(self, instance):
         video_url = self.url_input.text
-        output_dir = getattr(self, 'output_directory', '.')
+
+        # Get the Downloads path from plyer
+        output_dir = os.path.join(storagepath.get_downloads_dir(), 'YT_Download')
 
         if not video_url.strip():
             self.update_status("Error: Please enter a YouTube video URL.", "#BF616A")  # Red text
             return
 
         if not os.path.exists(output_dir):
-            self.update_status("Error: Output directory does not exist.", "#BF616A")  # Red text
-            return
+            os.makedirs(output_dir)  # Create the folder if it doesn't exist
 
         self.update_status("Starting download...", "#A3BE8C")  # Green text
         threading.Thread(target=self.download_video, args=(video_url, output_dir), daemon=True).start()
@@ -166,9 +125,10 @@ class YouTubeDownloaderApp(App):
                 self.update_status(f"Download completed: {d['filename']}", "#A3BE8C")  # Green text
                 self.update_progress(100)
 
+        # Add the YT_Download folder to the output path
         ydl_opts = {
             'format': 'best',
-            'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
+            'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),  # Save to the YT_Download folder
             'progress_hooks': [hook],
         }
         try:
